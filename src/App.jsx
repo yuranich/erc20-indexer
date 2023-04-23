@@ -11,6 +11,23 @@ import {
 } from '@chakra-ui/react';
 import { Alchemy, Network, Utils } from 'alchemy-sdk';
 import { useState } from 'react';
+import { useEffect } from 'react';
+import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
+import { Web3Modal } from '@web3modal/react'
+import { configureChains, createClient, WagmiConfig } from 'wagmi'
+import { mainnet, sepolia, goerli } from 'wagmi/chains'
+import { Web3Button } from '@web3modal/react'
+
+const chains = [mainnet, sepolia, goerli]
+const projectId = 'eca09ff6e02428471159e5ab255b6e13'
+
+const { provider } = configureChains(chains, [w3mProvider({ projectId })])
+const wagmiClient = createClient({
+  autoConnect: true,
+  connectors: w3mConnectors({ projectId, version: 1, chains }),
+  provider
+})
+const ethereumClient = new EthereumClient(wagmiClient, chains)
 
 function App() {
   const [userAddress, setUserAddress] = useState('');
@@ -18,9 +35,19 @@ function App() {
   const [hasQueried, setHasQueried] = useState(false);
   const [tokenDataObjects, setTokenDataObjects] = useState([]);
 
+  useEffect(() => {
+    async function updateAddr() {
+      const account = ethereumClient.getAccount();
+      console.log(account);
+      setUserAddress(account.address);
+    };
+
+    updateAddr();
+  }, []);
+
   async function getTokenBalance() {
     const config = {
-      apiKey: '<-- COPY-PASTE YOUR ALCHEMY API KEY HERE -->',
+      apiKey: 'rS6m8OYRFtajNMoOlPAgfoZ_UKagK4ug',
       network: Network.ETH_MAINNET,
     };
 
@@ -42,6 +69,8 @@ function App() {
     setHasQueried(true);
   }
   return (
+    <>
+    <WagmiConfig client={wagmiClient}>
     <Box w="100vw">
       <Center>
         <Flex
@@ -57,6 +86,7 @@ function App() {
             token balances!
           </Text>
         </Flex>
+        <Web3Button />
       </Center>
       <Flex
         w="100%"
@@ -75,6 +105,7 @@ function App() {
           p={4}
           bgColor="white"
           fontSize={24}
+          value={userAddress}
         />
         <Button fontSize={20} onClick={getTokenBalance} mt={36} bgColor="blue">
           Check ERC-20 Token Balances
@@ -113,6 +144,9 @@ function App() {
         )}
       </Flex>
     </Box>
+    </WagmiConfig>
+     <Web3Modal projectId={projectId} ethereumClient={ethereumClient} />
+     </>
   );
 }
 
